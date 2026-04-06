@@ -1,10 +1,9 @@
 ---
 name: ppt-maker
-description: Creates PowerPoint presentations using Gemma 4. Use this skill when the user wants to make slides, decks, or presentations.
+description: Creates PowerPoint presentations using Gemma 4. Use this skill when the user wants to make slides, a deck, or a presentation.
 ---
 
-# PPT Maker Skill
-
+# PPT Maker
 ## Overview
 
 This skill enables the agent to generate professional PowerPoint presentations
