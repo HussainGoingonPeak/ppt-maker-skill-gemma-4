@@ -1,393 +1,391 @@
-
-## 2. `scripts/ppt_generator.py` (Python Script for Gemma 4 ADK)
-
-```python
-#!/usr/bin/env python3
 """
-PPT Generator Script for Gemma 4 ADK Skill
-Creates professional PowerPoint presentations using python-pptx
+PPT Maker Script - Fully Offline PowerPoint Generator
+Uses python-pptx to create presentations from a JSON config.
+
+Usage:
+    python script.py config.json output.pptx
+    python script.py --json '{"title":"...","slides":[...]}' output.pptx
+
+Install:
+    pip install python-pptx
 """
 
-import argparse
 import json
-import os
 import sys
+import argparse
 from pptx import Presentation
-from pptx.util import Inches, Pt
-from pptx.dml.color import RgbColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-from pptx.enum.shapes import MSO_SHAPE
-from typing import List, Dict, Any, Optional, Tuple
+from pptx.util import Inches, Pt, Emu
+from pptx.dml.color import RGBColor
+from pptx.enum.text import PP_ALIGN
 
 
-class PPTMaker:
-    """Professional PowerPoint presentation generator"""
-    
-    THEMES = {
-        "modern": {
-            "primary": (30, 58, 138),
-            "secondary": (59, 130, 246),
-            "accent": (245, 158, 11),
-            "bg": (255, 255, 255),
-            "text": (31, 41, 55),
-            "light_bg": (243, 244, 246)
-        },
-        "dark": {
-            "primary": (17, 24, 39),
-            "secondary": (55, 65, 81),
-            "accent": (16, 185, 129),
-            "bg": (249, 250, 251),
-            "text": (17, 24, 39),
-            "light_bg": (229, 231, 235)
-        },
-        "creative": {
-            "primary": (124, 58, 237),
-            "secondary": (236, 72, 153),
-            "accent": (251, 191, 36),
-            "bg": (255, 255, 255),
-            "text": (31, 41, 55),
-            "light_bg": (254, 243, 199)
-        }
-    }
-    
-    def __init__(self, theme: str = "modern"):
-        self.prs = Presentation()
-        self.theme = self.THEMES.get(theme, self.THEMES["modern"])
-        self._setup_slide_size()
-    
-    def _setup_slide_size(self):
-        """Set 16:9 widescreen format"""
-        self.prs.slide_width = Inches(13.333)
-        self.prs.slide_height = Inches(7.5)
-    
-    def _rgb_color(self, rgb: Tuple[int, int, int]) -> RgbColor:
-        """Create RGB color from tuple"""
-        return RgbColor(rgb[0], rgb[1], rgb[2])
-    
-    def _add_shape(self, slide, shape_type, left, top, width, height, 
-                   fill_color: Optional[Tuple] = None, line_color: Optional[Tuple] = None):
-        """Add shape with optional fill and line colors"""
-        shape = slide.shapes.add_shape(shape_type, left, top, width, height)
-        
-        if fill_color:
-            shape.fill.solid()
-            shape.fill.fore_color.rgb = self._rgb_color(fill_color)
+# ─── THEMES ────────────────────────────────────────────────────────────────────
+
+THEMES = {
+    "dark": {
+        "bg":          RGBColor(0x1E, 0x27, 0x61),   # deep navy
+        "title_text":  RGBColor(0xFF, 0xFF, 0xFF),   # white
+        "body_text":   RGBColor(0xE0, 0xE8, 0xFF),   # light blue-white
+        "accent":      RGBColor(0x00, 0xC8, 0xFF),   # cyan accent
+        "slide_bg":    RGBColor(0xF4, 0xF6, 0xFF),   # very light lavender
+        "slide_text":  RGBColor(0x1A, 0x1A, 0x2E),   # near black
+        "bullet_dot":  RGBColor(0x00, 0xC8, 0xFF),   # cyan bullet
+    },
+    "light": {
+        "bg":          RGBColor(0xFF, 0xFF, 0xFF),
+        "title_text":  RGBColor(0x1A, 0x1A, 0x2E),
+        "body_text":   RGBColor(0x22, 0x22, 0x22),
+        "accent":      RGBColor(0x21, 0x5C, 0xBF),
+        "slide_bg":    RGBColor(0xF9, 0xF9, 0xF9),
+        "slide_text":  RGBColor(0x1A, 0x1A, 0x2E),
+        "bullet_dot":  RGBColor(0x21, 0x5C, 0xBF),
+    },
+    "blue": {
+        "bg":          RGBColor(0x06, 0x5A, 0x82),
+        "title_text":  RGBColor(0xFF, 0xFF, 0xFF),
+        "body_text":   RGBColor(0xD0, 0xEC, 0xFF),
+        "accent":      RGBColor(0x02, 0xC3, 0x9A),
+        "slide_bg":    RGBColor(0xEA, 0xF4, 0xFF),
+        "slide_text":  RGBColor(0x06, 0x2A, 0x40),
+        "bullet_dot":  RGBColor(0x02, 0xC3, 0x9A),
+    },
+}
+
+
+# ─── HELPERS ───────────────────────────────────────────────────────────────────
+
+def set_slide_background(slide, color: RGBColor):
+    """Fill slide background with a solid color."""
+    background = slide.background
+    fill = background.fill
+    fill.solid()
+    fill.fore_color.rgb = color
+
+
+def add_text_box(slide, text, left, top, width, height,
+                 font_size=18, bold=False, color=RGBColor(0, 0, 0),
+                 align=PP_ALIGN.LEFT, word_wrap=True):
+    """Add a styled text box to the slide."""
+    txBox = slide.shapes.add_textbox(
+        Inches(left), Inches(top), Inches(width), Inches(height)
+    )
+    tf = txBox.text_frame
+    tf.word_wrap = word_wrap
+    p = tf.paragraphs[0]
+    p.alignment = align
+    run = p.add_run()
+    run.text = text
+    run.font.size = Pt(font_size)
+    run.font.bold = bold
+    run.font.color.rgb = color
+    run.font.name = "Calibri"
+    return txBox
+
+
+def add_bullet_points(slide, bullets, left, top, width, height,
+                      font_size=16, text_color=RGBColor(0, 0, 0),
+                      dot_color=RGBColor(0, 120, 200)):
+    """Add bullet points with colored dots."""
+    txBox = slide.shapes.add_textbox(
+        Inches(left), Inches(top), Inches(width), Inches(height)
+    )
+    tf = txBox.text_frame
+    tf.word_wrap = True
+
+    for i, bullet in enumerate(bullets):
+        if i == 0:
+            p = tf.paragraphs[0]
         else:
-            shape.fill.background()
-            
-        if line_color:
-            shape.line.color.rgb = self._rgb_color(line_color)
-        else:
-            shape.line.fill.background()
-            
-        return shape
-    
-    def _add_textbox(self, slide, left, top, width, height, 
-                     text: str, font_size: int = 18, 
-                     bold: bool = False, color: Optional[Tuple] = None,
-                     align: PP_ALIGN = PP_ALIGN.LEFT, font_name: str = "Calibri"):
-        """Add styled text box"""
-        box = slide.shapes.add_textbox(left, top, width, height)
-        tf = box.text_frame
-        tf.word_wrap = True
-        
-        p = tf.paragraphs[0]
-        p.text = text
-        p.alignment = align
-        
-        for run in p.runs:
-            run.font.size = Pt(font_size)
-            run.font.bold = bold
-            run.font.name = font_name
-            run.font.color.rgb = self._rgb_color(color or self.theme["text"])
-        
-        return box
-    
-    def create_title_slide(self, title: str, subtitle: Optional[str] = None, 
-                          presenter: Optional[str] = None):
-        """Create opening title slide"""
-        slide_layout = self.prs.slide_layouts[6]  # Blank
-        slide = self.prs.slides.add_slide(slide_layout)
-        
-        # Header bar
-        self._add_shape(slide, MSO_SHAPE.RECTANGLE, 
-                       Inches(0), Inches(0), 
-                       Inches(13.333), Inches(1.2), 
-                       self.theme["primary"])
-        
-        # Accent line
-        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
-                       Inches(0), Inches(1.2),
-                       Inches(13.333), Inches(0.1),
-                       self.theme["accent"])
-        
-        # Title
-        self._add_textbox(slide, Inches(0.5), Inches(2.5), 
-                         Inches(12.333), Inches(1.5),
-                         title, font_size=44, bold=True, 
-                         color=self.theme["primary"], align=PP_ALIGN.CENTER)
-        
-        # Subtitle
-        if subtitle:
-            self._add_textbox(slide, Inches(0.5), Inches(4.2),
-                             Inches(12.333), Inches(1),
-                             subtitle, font_size=24, 
-                             color=self.theme["secondary"], align=PP_ALIGN.CENTER)
-        
-        # Presenter
-        if presenter:
-            self._add_textbox(slide, Inches(0.5), Inches(6),
-                             Inches(12.333), Inches(0.8),
-                             f"Presented by: {presenter}", 
-                             font_size=16, align=PP_ALIGN.CENTER)
-        
-        return slide
-    
-    def add_content_slide(self, title: str, content_items: List[str]):
-        """Add bullet point content slide"""
-        slide_layout = self.prs.slide_layouts[6]
-        slide = self.prs.slides.add_slide(slide_layout)
-        
-        # Header
-        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
-                       Inches(0), Inches(0),
-                       Inches(13.333), Inches(1.3),
-                       self.theme["primary"])
-        
-        # Title
-        self._add_textbox(slide, Inches(0.5), Inches(0.3),
-                         Inches(12.333), Inches(0.8),
-                         title, font_size=32, bold=True, 
-                         color=(255, 255, 255))
-        
-        # Content background
-        self._add_shape(slide, MSO_SHAPE.ROUNDED_RECTANGLE,
-                       Inches(0.5), Inches(1.6),
-                       Inches(12.333), Inches(5.5),
-                       self.theme["light_bg"])
-        
-        # Content
-        content_box = slide.shapes.add_textbox(
-            Inches(0.8), Inches(1.9), Inches(11.733), Inches(5))
-        tf = content_box.text_frame
-        tf.word_wrap = True
-        
-        for i, item in enumerate(content_items):
-            if i == 0:
-                p = tf.paragraphs[0]
-            else:
-                p = tf.add_paragraph()
-            
-            p.text = f"• {item}"
-            p.level = 0
-            p.font.size = Pt(20)
-            p.font.name = "Calibri"
-            p.font.color.rgb = self._rgb_color(self.theme["text"])
-            p.space_after = Pt(12)
-        
-        return slide
-    
-    def add_two_column_slide(self, title: str, 
-                            left_title: str, left_items: List[str],
-                            right_title: str, right_items: List[str]):
-        """Create side-by-side content layout"""
-        slide_layout = self.prs.slide_layouts[6]
-        slide = self.prs.slides.add_slide(slide_layout)
-        
-        # Header
-        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
-                       Inches(0), Inches(0),
-                       Inches(13.333), Inches(1.2),
-                       self.theme["primary"])
-        
-        # Main title
-        self._add_textbox(slide, Inches(0.5), Inches(0.25),
-                         Inches(12.333), Inches(0.7),
-                         title, font_size=28, bold=True, 
-                         color=(255, 255, 255))
-        
-        # Left column
-        self._add_shape(slide, MSO_SHAPE.ROUNDED_RECTANGLE,
-                       Inches(0.5), Inches(1.5),
-                       Inches(6), Inches(5.5),
-                       (255, 255, 255))
-        
-        self._add_textbox(slide, Inches(0.7), Inches(1.7),
-                         Inches(5.6), Inches(0.6),
-                         left_title, font_size=22, bold=True, 
-                         color=self.theme["primary"])
-        
-        left_content = slide.shapes.add_textbox(
-            Inches(0.7), Inches(2.4), Inches(5.6), Inches(4.4))
-        tf = left_content.text_frame
-        tf.word_wrap = True
-        
-        for item in left_items:
             p = tf.add_paragraph()
-            p.text = f"• {item}"
-            p.font.size = Pt(16)
-            p.space_after = Pt(8)
-        
-        # Right column
-        self._add_shape(slide, MSO_SHAPE.ROUNDED_RECTANGLE,
-                       Inches(6.8), Inches(1.5),
-                       Inches(6), Inches(5.5),
-                       self.theme["light_bg"])
-        
-        self._add_textbox(slide, Inches(7), Inches(1.7),
-                         Inches(5.6), Inches(0.6),
-                         right_title, font_size=22, bold=True, 
-                         color=self.theme["secondary"])
-        
-        right_content = slide.shapes.add_textbox(
-            Inches(7), Inches(2.4), Inches(5.6), Inches(4.4))
-        tf = right_content.text_frame
-        tf.word_wrap = True
-        
-        for item in right_items:
-            p = tf.add_paragraph()
-            p.text = f"• {item}"
-            p.font.size = Pt(16)
-            p.space_after = Pt(8)
-        
-        return slide
-    
-    def add_section_divider(self, section_title: str, 
-                           section_number: Optional[int] = None):
-        """Create section transition slide"""
-        slide_layout = self.prs.slide_layouts[6]
-        slide = self.prs.slides.add_slide(slide_layout)
-        
-        # Full background
-        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
-                       Inches(0), Inches(0),
-                       Inches(13.333), Inches(7.5),
-                       self.theme["primary"])
-        
-        # Decorative circle
-        self._add_shape(slide, MSO_SHAPE.OVAL,
-                       Inches(10), Inches(-2),
-                       Inches(5), Inches(5),
-                       self.theme["secondary"])
-        
-        # Section number
-        if section_number:
-            num_text = f"0{section_number}" if section_number < 10 else str(section_number)
-            self._add_textbox(slide, Inches(0.5), Inches(2.5),
-                             Inches(2), Inches(1.5),
-                             num_text, font_size=72, bold=True, 
-                             color=self.theme["accent"])
-        
-        # Section title
-        self._add_textbox(slide, Inches(0.5), Inches(4),
-                         Inches(12.333), Inches(1.5),
-                         section_title, font_size=48, bold=True, 
-                         color=(255, 255, 255))
-        
-        # Accent line
-        self._add_shape(slide, MSO_SHAPE.RECTANGLE,
-                       Inches(0.5), Inches(5.5),
-                       Inches(3), Inches(0.15),
-                       self.theme["accent"])
-        
-        return slide
-    
-    def save(self, filename: str = "presentation.pptx") -> str:
-        """Save presentation to file"""
-        # Ensure output directory exists
-        output_dir = os.path.join(os.path.dirname(__file__), "..", "output")
-        os.makedirs(output_dir, exist_ok=True)
-        
-        output_path = os.path.join(output_dir, filename)
-        self.prs.save(output_path)
-        return output_path
+
+        p.space_before = Pt(4)
+
+        # Colored bullet dot
+        dot_run = p.add_run()
+        dot_run.text = "● "
+        dot_run.font.size = Pt(font_size - 2)
+        dot_run.font.color.rgb = dot_color
+        dot_run.font.name = "Calibri"
+
+        # Bullet text
+        text_run = p.add_run()
+        text_run.text = bullet
+        text_run.font.size = Pt(font_size)
+        text_run.font.color.rgb = text_color
+        text_run.font.name = "Calibri"
 
 
-def create_presentation_from_config(config: Dict[str, Any]) -> str:
-    """
-    Create presentation from configuration dictionary
-    
-    Config format:
-    {
-        "title": "Presentation Title",
-        "theme": "modern|dark|creative",
-        "presenter": "Optional Name",
-        "slides": [
-            {"type": "title", "subtitle": "..."},
-            {"type": "content", "title": "...", "content": ["...", "..."]},
-            {"type": "two_column", "title": "...", "left": {...}, "right": {...}},
-            {"type": "section", "title": "...", "number": 1}
-        ]
-    }
-    """
-    maker = PPTMaker(theme=config.get("theme", "modern"))
-    
-    slides = config.get("slides", [])
-    
-    # First slide should be title
-    if slides and slides[0].get("type") == "title":
-        title_slide = slides[0]
-        maker.create_title_slide(
-            title=config["title"],
-            subtitle=title_slide.get("subtitle"),
-            presenter=config.get("presenter")
+def add_accent_bar(slide, left, top, width, height, color: RGBColor):
+    """Add a colored rectangle accent bar."""
+    shape = slide.shapes.add_shape(
+        1,  # MSO_SHAPE_TYPE.RECTANGLE
+        Inches(left), Inches(top), Inches(width), Inches(height)
+    )
+    shape.fill.solid()
+    shape.fill.fore_color.rgb = color
+    shape.line.fill.background()  # no border
+
+
+# ─── SLIDE BUILDERS ────────────────────────────────────────────────────────────
+
+def build_title_slide(prs, slide_data, theme):
+    """Title slide: big title + subtitle on themed background."""
+    slide_layout = prs.slide_layouts[6]  # blank
+    slide = prs.slides.add_slide(slide_layout)
+    set_slide_background(slide, theme["bg"])
+
+    # Accent bar on left edge
+    add_accent_bar(slide, 0, 0, 0.12, 7.5, theme["accent"])
+
+    # Decorative bottom strip
+    add_accent_bar(slide, 0, 6.8, 10, 0.12, theme["accent"])
+
+    # Title
+    add_text_box(
+        slide,
+        slide_data.get("title", "Untitled"),
+        left=0.5, top=2.2, width=9, height=1.8,
+        font_size=44, bold=True,
+        color=theme["title_text"],
+        align=PP_ALIGN.CENTER
+    )
+
+    # Subtitle
+    subtitle = slide_data.get("subtitle", "")
+    if subtitle:
+        add_text_box(
+            slide,
+            subtitle,
+            left=0.5, top=4.1, width=9, height=1.0,
+            font_size=22, bold=False,
+            color=theme["body_text"],
+            align=PP_ALIGN.CENTER
         )
-        slides = slides[1:]
-    
-    # Process remaining slides
-    for slide in slides:
-        slide_type = slide.get("type", "content")
-        
-        if slide_type == "content":
-            maker.add_content_slide(
-                title=slide["title"],
-                content_items=slide.get("content", [])
-            )
-        elif slide_type == "two_column":
-            maker.add_two_column_slide(
-                title=slide["title"],
-                left_title=slide["left"]["title"],
-                left_items=slide["left"]["content"],
-                right_title=slide["right"]["title"],
-                right_items=slide["right"]["content"]
-            )
-        elif slide_type == "section":
-            maker.add_section_divider(
-                section_title=slide["title"],
-                section_number=slide.get("number")
-            )
-    
-    filename = config.get("filename", "presentation.pptx")
-    return maker.save(filename)
+
+    return slide
+
+
+def build_content_slide(prs, slide_data, theme):
+    """Content slide: heading + bullet points."""
+    slide_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(slide_layout)
+    set_slide_background(slide, theme["slide_bg"])
+
+    # Top header bar
+    add_accent_bar(slide, 0, 0, 10, 1.2, theme["bg"])
+
+    # Slide title in header
+    add_text_box(
+        slide,
+        slide_data.get("title", ""),
+        left=0.3, top=0.1, width=9.4, height=1.0,
+        font_size=28, bold=True,
+        color=theme["title_text"],
+        align=PP_ALIGN.LEFT
+    )
+
+    # Accent side bar
+    add_accent_bar(slide, 0, 1.2, 0.08, 6.0, theme["accent"])
+
+    # Bullets
+    bullets = slide_data.get("bullets", [])
+    add_bullet_points(
+        slide, bullets,
+        left=0.4, top=1.4, width=9.2, height=5.6,
+        font_size=17,
+        text_color=theme["slide_text"],
+        dot_color=theme["bullet_dot"]
+    )
+
+    return slide
+
+
+def build_two_column_slide(prs, slide_data, theme):
+    """Two-column slide: heading + left/right content."""
+    slide_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(slide_layout)
+    set_slide_background(slide, theme["slide_bg"])
+
+    # Header bar
+    add_accent_bar(slide, 0, 0, 10, 1.2, theme["bg"])
+
+    # Title
+    add_text_box(
+        slide,
+        slide_data.get("title", ""),
+        left=0.3, top=0.1, width=9.4, height=1.0,
+        font_size=28, bold=True,
+        color=theme["title_text"],
+        align=PP_ALIGN.LEFT
+    )
+
+    # Divider line in middle
+    add_accent_bar(slide, 4.88, 1.3, 0.06, 5.8, theme["accent"])
+
+    # Left column label
+    add_text_box(
+        slide, "◀  Left",
+        left=0.3, top=1.3, width=4.4, height=0.4,
+        font_size=13, bold=True,
+        color=theme["accent"]
+    )
+
+    # Right column label
+    add_text_box(
+        slide, "Right  ▶",
+        left=5.1, top=1.3, width=4.5, height=0.4,
+        font_size=13, bold=True,
+        color=theme["accent"]
+    )
+
+    # Left bullets
+    left_bullets = slide_data.get("left", [])
+    add_bullet_points(
+        slide, left_bullets,
+        left=0.3, top=1.8, width=4.4, height=5.0,
+        font_size=16,
+        text_color=theme["slide_text"],
+        dot_color=theme["bullet_dot"]
+    )
+
+    # Right bullets
+    right_bullets = slide_data.get("right", [])
+    add_bullet_points(
+        slide, right_bullets,
+        left=5.1, top=1.8, width=4.5, height=5.0,
+        font_size=16,
+        text_color=theme["slide_text"],
+        dot_color=theme["bullet_dot"]
+    )
+
+    return slide
+
+
+def build_closing_slide(prs, slide_data, theme):
+    """Closing/thank-you slide."""
+    slide_layout = prs.slide_layouts[6]
+    slide = prs.slides.add_slide(slide_layout)
+    set_slide_background(slide, theme["bg"])
+
+    # Accent bars
+    add_accent_bar(slide, 0, 0, 10, 0.12, theme["accent"])
+    add_accent_bar(slide, 0, 7.38, 10, 0.12, theme["accent"])
+
+    # Main message
+    add_text_box(
+        slide,
+        slide_data.get("title", "Thank You"),
+        left=0.5, top=2.5, width=9, height=1.5,
+        font_size=48, bold=True,
+        color=theme["title_text"],
+        align=PP_ALIGN.CENTER
+    )
+
+    subtitle = slide_data.get("subtitle", "")
+    if subtitle:
+        add_text_box(
+            slide,
+            subtitle,
+            left=0.5, top=4.2, width=9, height=1.0,
+            font_size=20, bold=False,
+            color=theme["body_text"],
+            align=PP_ALIGN.CENTER
+        )
+
+    return slide
+
+
+# ─── SLIDE DISPATCHER ──────────────────────────────────────────────────────────
+
+SLIDE_BUILDERS = {
+    "title":      build_title_slide,
+    "content":    build_content_slide,
+    "two_column": build_two_column_slide,
+    "closing":    build_closing_slide,
+}
+
+
+# ─── MAIN ──────────────────────────────────────────────────────────────────────
+
+def create_presentation(config: dict, output_path: str):
+    """Build the full presentation from config dict."""
+
+    theme_name = config.get("theme", "dark").lower()
+    theme = THEMES.get(theme_name, THEMES["dark"])
+
+    prs = Presentation()
+    prs.slide_width  = Inches(10)
+    prs.slide_height = Inches(7.5)
+
+    slides_data = config.get("slides", [])
+
+    if not slides_data:
+        print("⚠️  No slides found in config. Add at least one slide.")
+        sys.exit(1)
+
+    for i, slide_data in enumerate(slides_data):
+        slide_type = slide_data.get("type", "content").lower()
+        builder = SLIDE_BUILDERS.get(slide_type, build_content_slide)
+        builder(prs, slide_data, theme)
+        print(f"  ✅ Slide {i+1}/{len(slides_data)}: [{slide_type}] {slide_data.get('title','')}")
+
+    prs.save(output_path)
+    print(f"\n🎉 Presentation saved: {output_path}")
+    print(f"   Slides: {len(slides_data)}  |  Theme: {theme_name}")
 
 
 def main():
-    """CLI entry point"""
-    parser = argparse.ArgumentParser(description="Generate PowerPoint presentations")
-    parser.add_argument("--config", type=str, required=True,
-                       help="JSON configuration string or path to JSON file")
-    parser.add_argument("--output", type=str, default="presentation.pptx",
-                       help="Output filename")
-    
+    parser = argparse.ArgumentParser(
+        description="Create a PowerPoint presentation from a JSON config."
+    )
+    parser.add_argument(
+        "config_or_flag",
+        nargs="?",
+        help="Path to JSON config file, OR use --json flag"
+    )
+    parser.add_argument(
+        "output",
+        nargs="?",
+        default="output.pptx",
+        help="Output .pptx filename (default: output.pptx)"
+    )
+    parser.add_argument(
+        "--json",
+        dest="json_str",
+        help="Inline JSON config string"
+    )
+
     args = parser.parse_args()
-    
-    # Parse config
-    config_str = args.config
-    if os.path.exists(config_str):
-        with open(config_str, 'r') as f:
-            config = json.load(f)
+
+    # Load config
+    if args.json_str:
+        try:
+            config = json.loads(args.json_str)
+        except json.JSONDecodeError as e:
+            print(f"❌ Invalid JSON: {e}")
+            sys.exit(1)
+        output_path = args.config_or_flag or args.output
+    elif args.config_or_flag:
+        try:
+            with open(args.config_or_flag, "r", encoding="utf-8") as f:
+                config = json.load(f)
+        except FileNotFoundError:
+            print(f"❌ Config file not found: {args.config_or_flag}")
+            sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f"❌ Invalid JSON in config file: {e}")
+            sys.exit(1)
+        output_path = args.output
     else:
-        config = json.loads(config_str)
-    
-    # Add output filename if not specified
-    if "filename" not in config:
-        config["filename"] = args.output
-    
-    # Generate presentation
-    output_path = create_presentation_from_config(config)
-    print(f"Presentation saved to: {output_path}")
-    return 0
+        print("❌ Provide a config file path or use --json '...'")
+        parser.print_help()
+        sys.exit(1)
+
+    print(f"\n🚀 Building: {config.get('title', 'Presentation')}")
+    print(f"   Theme: {config.get('theme', 'dark')}  |  Slides: {len(config.get('slides', []))}\n")
+
+    create_presentation(config, output_path)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
