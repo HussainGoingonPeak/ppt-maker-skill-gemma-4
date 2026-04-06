@@ -1,93 +1,82 @@
-# PPT Maker
+---
+name: ppt-maker
+description: >
+  Create professional PowerPoint presentations using python-pptx library.
+  Use this skill when the user wants to generate PPT files from outlines,
+  structured content, or data. Supports modern themes, charts, images,
+  and various slide layouts.
+---
 
-Create professional PowerPoint presentations using python-pptx library with intelligent content structuring and modern design aesthetics.
+# PPT Maker Skill
 
-## Usage
+## Overview
 
-Use this skill when the user wants to:
-- Create a new PowerPoint presentation from scratch
-- Convert text content, outlines, or structured data into slides
-- Design presentations with specific themes, colors, or layouts
-- Generate charts, diagrams, or visual elements in slides
-- Batch create slides from structured content (JSON, CSV, etc.)
+This skill enables the agent to generate professional PowerPoint presentations
+using the python-pptx library. It supports multiple themes, slide layouts,
+charts, images, and structured content conversion.
 
-## Requirements
+## When to Use
 
-- python-pptx library for PowerPoint generation
-- Pillow (PIL) for image processing if needed
-- Standard Python libraries (os, json, etc.)
+Use this skill when:
+- User requests a PowerPoint presentation
+- Converting text outlines to slides
+- Creating data visualizations in PPT format
+- Generating templates or reports
+- Batch slide creation from structured data
+
+## Workflow
+
+### 1. Analyze Requirements
+- Determine presentation topic and audience
+- Identify number of slides needed
+- Choose appropriate theme (modern, dark, creative)
+- Plan slide structure (title, content, two-column, charts, images)
+
+### 2. Design Structure
+Create a logical flow:
+- **Slide 1**: Title slide (title, subtitle, presenter)
+- **Slide 2**: Agenda/Overview
+- **Slides 3-N**: Content sections
+- **Final Slide**: Conclusion/Thank you/Q&A
+
+### 3. Generate Presentation
+Use the `scripts/ppt_generator.py` script to create the PPT file.
+
+### 4. Validate Output
+Ensure:
+- Consistent formatting across slides
+- Proper text wrapping and alignment
+- Color scheme adherence
+- File saved successfully
+
+## Available Themes
+
+| Theme | Primary | Secondary | Accent | Use Case |
+|-------|---------|-----------|--------|----------|
+| modern | Deep Blue (#1E3A8A) | Bright Blue (#3B82F6) | Amber (#F59E0B) | Corporate/Business |
+| dark | Near Black (#111827) | Dark Gray (#374151) | Emerald (#10B981) | Technical/Developer |
+| creative | Violet (#7C3AED) | Pink (#EC4899) | Amber (#FBBF24) | Marketing/Creative |
+
+## Slide Types
+
+1. **Title Slide**: Main title, subtitle, optional presenter name
+2. **Content Slide**: Title + bullet point list
+3. **Two-Column Slide**: Side-by-side comparison or related content
+4. **Section Divider**: Visual break between major sections
+5. **Image Slide**: Title + image with optional caption
+6. **Chart Slide**: Data visualization (bar, line, pie charts)
 
 ## Best Practices
 
-1. **Content Structure**: Always organize content hierarchically - Title Slide → Agenda → Content Sections → Conclusion/Thank You
-2. **Visual Hierarchy**: Use font sizes strategically (Titles 32-44pt, Headers 24-28pt, Body 18-20pt)
-3. **Color Schemes**: Apply consistent color palettes (primary, secondary, accent colors)
-4. **Slide Layouts**: Match layout to content type (Title, Title and Content, Two Content, Blank for custom)
-5. **Charts**: Use python-pptx chart capabilities for data visualization
-6. **Images**: Handle image insertion with proper aspect ratio preservation
-7. **Spacing**: Maintain consistent margins and text box positioning
+- **Font Sizes**: Titles 32-44pt, Headers 24-28pt, Body 18-20pt
+- **Color Contrast**: Ensure text is readable against backgrounds
+- **White Space**: Don't overcrowd slides; use margins
+- **Consistency**: Use same theme throughout presentation
+- **Bullet Points**: Max 6 points per slide, max 2 lines per point
 
-## Design Templates
+## Script Usage
 
-### Modern Corporate
-- Primary: #1E3A8A (Deep Blue)
-- Secondary: #3B82F6 (Bright Blue)  
-- Accent: #F59E0B (Amber)
-- Background: #FFFFFF
-- Text: #1F2937
+Call the PPT generator script with JSON configuration:
 
-### Minimal Dark
-- Primary: #111827 (Near Black)
-- Secondary: #374151 (Dark Gray)
-- Accent: #10B981 (Emerald)
-- Background: #F9FAFB
-- Text: #111827
-
-### Creative Gradient
-- Primary: #7C3AED (Violet)
-- Secondary: #EC4899 (Pink)
-- Accent: #FBBF24 (Amber)
-- Background: gradient effect
-- Text: #1F2937
-
-## Core Functions
-
-### create_presentation(title, subtitle=None, theme="modern")
-Initialize a new presentation with theme settings.
-
-### add_title_slide(prs, title, subtitle, presenter=None)
-Create opening slide with branding.
-
-### add_content_slide(prs, title, content_list, layout="title_and_content")
-Add bullet point content slides.
-
-### add_two_column_slide(prs, title, left_content, right_content)
-Side-by-side content layout.
-
-### add_image_slide(prs, title, image_path, caption=None)
-Insert image with optional text overlay.
-
-### add_chart_slide(prs, title, chart_data, chart_type="bar")
-Create data visualization slides.
-
-### add_section_header(prs, section_title)
-Divider slides between sections.
-
-### save_presentation(prs, filename)
-Export to .pptx file.
-
-## Example Workflow
-
-1. Parse user content/requirements
-2. Design slide outline and structure
-3. Initialize presentation with appropriate theme
-4. Generate slides sequentially
-5. Apply consistent formatting
-6. Save and provide download link
-
-## Output Format
-
-Always return:
-- Python script using python-pptx
-- Brief explanation of slide structure
-- Instructions for customization
+```bash
+python scripts/ppt_generator.py --config '{"title": "My Presentation", "theme": "modern", "slides": [...]}'
