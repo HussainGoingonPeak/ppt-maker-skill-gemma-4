@@ -1,10 +1,6 @@
 ---
 name: ppt-maker
-description: >
-  Create professional PowerPoint presentations using python-pptx library.
-  Use this skill when the user wants to generate PPT files from outlines,
-  structured content, or data. Supports modern themes, charts, images,
-  and various slide layouts.
+description: Create professional PowerPoint presentations using python-pptx library. Use this skill when the user wants to generate PPT files from outlines, structured content, or data. Supports modern themes, charts, images, and various slide layouts.
 ---
 
 # PPT Maker Skill
