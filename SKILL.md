@@ -1,6 +1,6 @@
 ---
 name: ppt-maker
-description: Create professional PowerPoint presentations using python-pptx library. Use this skill when the user wants to generate PPT files from outlines, structured content, or data. Supports modern themes, charts, images, and various slide layouts.
+description: Creates PowerPoint presentations using Gemma 4. Use this skill when the user wants to make slides, decks, or presentations.
 ---
 
 # PPT Maker Skill
